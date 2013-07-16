@@ -490,3 +490,4 @@ def upgrade_connection(environ, start_response, stream):
         headers.append(("Sec-WebSocket-Protocol", ",".join(accepted_protocols)))
 
     start_response("101 Switching Protocols", headers)
+    return []
