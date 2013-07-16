@@ -5,6 +5,7 @@ from socket import error
 
 from . import exceptions as exc
 from .websocket import WebSocket, encode_bytes
+from .protocols import SUPPORTED_PROTOCOLS
 
 
 __all__ = ['upgrade_connection']
@@ -463,10 +464,18 @@ def upgrade_connection(environ, start_response, stream):
 
         return [msg]
 
+    protocol = environ.get("HTTP_SEC_WEBSOCKET_PROTOCOL", '')
+    requested_protocols = [p.strip() for p in protocol.split(',') if p]
+    accepted_protocols = []
+    for p in requested_protocols:
+        if p in SUPPORTED_PROTOCOLS:
+            accepted_protocols.append(p)
+
     ws = WebSocketHybi(environ, stream)
 
     environ.update({
         'wsgi.websocket_version': 'hybi-%s' % version,
+        'wsgi.websocket_protocol': accepted_protocols,
         'wsgi.websocket': ws
     })
 
@@ -476,5 +485,8 @@ def upgrade_connection(environ, start_response, stream):
         ("Sec-WebSocket-Accept", base64.b64encode(
             hashlib.sha1(key + GUID).digest())),
     ]
+
+    if protocol:
+        headers.append(("Sec-WebSocket-Protocol", ",".join(accepted_protocols)))
 
     start_response("101 Switching Protocols", headers)
